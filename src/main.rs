@@ -5,6 +5,8 @@ use std::io;
 use std::io::BufRead;
 use std::path::Path;
 
+use regex::Regex;
+
 fn read_lines_from_file<P>(file_path: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
     P: AsRef<Path>,
@@ -17,54 +19,31 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
     println!("Loading file input @ {file_path}...");
-    let mut passing_count = 0;
+    let commands_regex = Regex::new(r"(mul\([0-9]{1,3},[0-9]{1,3}\))|(do\(\))|(don't\(\))").unwrap();
+    let numbers_regex = Regex::new(r"[0-9]{1,3}").unwrap();
+    let mut total = 0;
+    let mut enabled = true;
+    println!("start!");
     if let Ok(lines) = read_lines_from_file(file_path) {
         for line in lines.flatten() {
-            let mut test_results = vec![];
-            let num_strs: Vec<&str> = line.split(char::is_whitespace).collect();
-            for num_str in num_strs.iter() {
-                let num: u32 = num_str.parse().expect("expected a number");
-                test_results.push(num);
+            let strs: Vec<&str> = commands_regex.find_iter(line.as_str()).map(|m| m.as_str()).collect();
+            for mul_str in strs.into_iter() {
+                if mul_str.contains("do()") {
+                    println!("on");
+                    enabled = true;
+                } else if mul_str.contains("don't()") {
+                    println!("off");
+                    enabled = false;
+                } else if mul_str.contains("mul") && enabled {
+                    let num_strs: Vec<&str> =
+                        numbers_regex.find_iter(mul_str).map(|m| m.as_str()).collect();
+                    let x: u32 = num_strs[0].parse().expect("no number???");
+                    let y: u32 = num_strs[1].parse().expect("no number???");
+                    total += x * y;
+                    println!("bump");
+                }
             }
-            if test_level_set(&test_results) {
-                passing_count += 1;
-            }
         }
     }
-    println!("passing count: {passing_count}");
-}
-
-pub fn test_level_set(levels: &Vec<u32>) -> bool {
-    if is_level_set_valid(levels) {
-        return true;
-    }
-    // try removing each element
-    for level_idx in 0..levels.len() {
-        let mut trimmed = levels.clone();
-        trimmed.remove(level_idx);
-        if is_level_set_valid(&trimmed) {
-            return true;
-        }
-    }
-    false
-}
-
-pub fn is_level_set_valid(levels: &Vec<u32>) -> bool {
-    let mut diffs = vec![];
-    for level_idx in 0..(levels.len() - 1) {
-        let diff = levels[level_idx + 1] as i32 - levels[level_idx] as i32;
-        let abs_diff = diff.abs();
-        if abs_diff < 1 || abs_diff > 3 {
-            return false;
-        }
-        diffs.push(diff);
-    }
-    let is_increasing = diffs[0] > 0;
-    for diff in diffs.iter() {
-        let increasing_diff = *diff > 0;
-        if increasing_diff != is_increasing {
-            return false;
-        }
-    }
-    true
+    println!("total: {total}");
 }
