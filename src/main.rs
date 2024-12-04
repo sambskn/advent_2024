@@ -5,10 +5,6 @@ use std::io;
 use std::io::BufRead;
 use std::path::Path;
 
-// use regex::Regex;
-
-const STR_LENGTH: usize = 4;
-
 fn read_lines_from_file<P>(file_path: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where
     P: AsRef<Path>,
@@ -31,10 +27,9 @@ fn main() {
             for letter in line.chars() {
                 // give each cell a value based on word we're looking for
                 row.push(match letter {
-                    'X' => 1,
-                    'M' => 2,
-                    'A' => 3,
-                    'S' => 4,
+                    'A' => 1, // center of target
+                    'M' => 2, // need to find 2
+                    'S' => 3, // need to find 2
                     _ => 0,
                 })
             }
@@ -48,10 +43,12 @@ fn main() {
         for col in 0..cells[row].len() {
             let cell_val = cells[row][col];
             // check every possible direction for match, if it's the start
+            // print!("{cell_val}");
             if cell_val == 1 {
-                match_count += find_matches_for_cell(&cells, &col, &row, &width, &height, STR_LENGTH)
+                match_count += find_matches_for_cell(&cells, &col, &row, &width, &height)
             }
         }
+        // println!("");
     }
     println!("total match count: {match_count}")
 }
@@ -63,76 +60,31 @@ pub fn find_matches_for_cell(
     y: &usize,
     width: &usize,
     height: &usize,
-    str_length: usize
 ) -> i32 {
     let mut match_count = 0;
-    
+
     // check every possible direction for a match
-    
-    // left to right
-    if *x <= (width - str_length) {
-        // check other vals
-        if cells[*y][x + 1] == 2 && cells[*y][x + 2] == 3 && cells[*y][x + 3] == 4 {
-            match_count += 1
+
+    // needs to be off the edge by one
+    if *x > 0 && *y > 0 && *x < (width - 1) && *y < (height - 1) {
+        // need to find 2 M's (2's) that are on the same 'side' as each other
+        // same for S's (3's)
+        // check upper left cell and go from there
+        let upper_left = cells[y - 1][x - 1];
+        let upper_right = cells[y - 1][x + 1];
+        let lower_left = cells[y + 1][x - 1];
+        let lower_right = cells[y + 1][x + 1];
+        if upper_right == lower_right && upper_left == lower_left {
+            if (upper_right == 2 && upper_left == 3) || (upper_right == 3 && upper_left == 2) {
+                match_count += 1;
+            }
+        }
+        if upper_right == upper_left && lower_right == lower_left {
+            if (upper_right == 2 && lower_right == 3) || (upper_right == 3 && lower_right == 2) {
+                match_count += 1;
+            }
         }
     }
-    
-    // right to left
-    if *x >= (str_length - 1) {
-        // check other vals
-        if cells[*y][x - 1] == 2 && cells[*y][x - 2] == 3 && cells[*y][x - 3] == 4 {
-            match_count += 1
-        }
-    }
-    
-    // down
-    if *y <= (height - str_length) {
-        // check other vals
-        if cells[y + 1][*x] == 2 && cells[y + 2][*x] == 3 && cells[y + 3][*x] == 4 {
-            match_count += 1
-        }
-    }
-    
-    // up
-    if *y >= (str_length - 1) {
-        // check other vals
-        if cells[y - 1][*x] == 2 && cells[y - 2][*x] == 3 && cells[y - 3][*x] == 4 {
-            match_count += 1
-        }
-    }
-    
-    // down right
-    if *y >= (str_length - 1) && *x <= (width - str_length) {
-        // check other vals
-        if cells[y - 1][x + 1] == 2 && cells[y - 2][x + 2] == 3 && cells[y - 3][x + 3] == 4 {
-            match_count += 1
-        }
-    }
-    
-    // up right
-    if *y <= (height - str_length) && *x <= (width - str_length) {
-        // check other vals
-        if cells[y + 1][x + 1] == 2 && cells[y + 2][x + 2] == 3 && cells[y + 3][x + 3] == 4 {
-            match_count += 1
-        }
-    }
-    
-    // down left
-    if *y >= (str_length - 1) && *x >= (str_length - 1) {
-        // check other vals
-        if cells[y - 1][x - 1] == 2 && cells[y - 2][x - 2] == 3 && cells[y - 3][x - 3] == 4 {
-            match_count += 1
-        }
-    }
-    
-    // up left
-    if *y <= (height - str_length) && *x >= (str_length - 1) {
-        // check other vals
-        if cells[y + 1][x - 1] == 2 && cells[y + 2][x - 2] == 3 && cells[y + 3][x - 3] == 4 {
-            match_count += 1
-        }
-    }
-    
-    
+
     match_count
 }
